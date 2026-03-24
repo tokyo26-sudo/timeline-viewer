@@ -33,12 +33,16 @@
   .nav-btn:disabled { opacity: 0.3; cursor: default; }
   .main { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 48px); }
   .sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-  .cal-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .cal-nav button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
-  .cal-nav button:hover { color: var(--accent); }
-  .cal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--text); cursor: pointer; user-select: none; }
-  .cal-title:hover { color: var(--accent); }
+  .cal-toolbar { padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .cal-toolbar button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
+  .cal-toolbar button:hover { color: var(--accent); }
+  .cal-toolbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--text); cursor: pointer; user-select: none; }
+  .cal-toolbar-title:hover { color: var(--accent); }
+  .cal-scroll { flex: 1; overflow-y: auto; padding: 0 0 8px; }
+  .cal-scroll::-webkit-scrollbar { width: 3px; }
+  .cal-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .cal-month-block { padding: 8px 12px 4px; }
+  .cal-month-label { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 4px; font-family: 'Syne', sans-serif; font-weight: 700; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
   .cal-dow { font-size: 9px; color: var(--text3); text-align: center; padding: 2px 0; }
   .cal-day { font-size: 10px; text-align: center; padding: 5px 2px; border-radius: 4px; cursor: default; color: var(--text3); position: relative; line-height: 1; }
@@ -46,12 +50,10 @@
   .cal-day.has-data:hover { background: rgba(124,106,247,0.2); color: var(--accent); }
   .cal-day.active { background: var(--accent) !important; color: #fff !important; }
   .cal-day .dot { position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 3px; border-radius: 50%; background: var(--accent3); }
-  .cal-all-btn { margin: 8px 12px; padding: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--text2); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; width: calc(100% - 24px); transition: all 0.15s; letter-spacing: 0.05em; flex-shrink: 0; }
+  .cal-all-btn { margin: 0 12px 8px; padding: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--text2); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; width: calc(100% - 24px); transition: all 0.15s; letter-spacing: 0.05em; flex-shrink: 0; }
   .cal-all-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .year-grid { flex: 1; overflow-y: auto; padding: 4px 8px; display: none; }
+  .year-grid { padding: 4px 8px; display: none; flex-shrink: 0; }
   .year-grid.visible { display: block; }
-  .year-grid::-webkit-scrollbar { width: 3px; }
-  .year-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   .year-item { padding: 5px 8px; cursor: pointer; border-radius: 4px; font-size: 11px; color: var(--text2); }
   .year-item:hover { background: var(--surface2); color: var(--accent); }
   .month-item { padding: 4px 8px 4px 20px; cursor: pointer; border-radius: 4px; font-size: 10px; color: var(--text3); }
@@ -103,16 +105,14 @@
 
 <div class="main">
   <div class="sidebar">
-    <div class="cal-header">
-      <div class="cal-nav">
-        <button id="cal-prev">◂</button>
-        <div class="cal-title" id="cal-title">—</div>
-        <button id="cal-next">▸</button>
-      </div>
-      <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-toolbar">
+      <button id="cal-prev">◂</button>
+      <div class="cal-toolbar-title" id="cal-title">—</div>
+      <button id="cal-next">▸</button>
     </div>
-    <button class="cal-all-btn" id="btn-all">すべて表示</button>
     <div class="year-grid" id="year-grid"></div>
+    <button class="cal-all-btn" id="btn-all">すべて表示</button>
+    <div class="cal-scroll" id="cal-scroll"></div>
   </div>
 
   <div class="map-wrap">
@@ -155,11 +155,14 @@ function totalDist(pts) { let d=0; for(let i=1;i<pts.length;i++) d+=distKm(pts[i
 
 function filterOutliers(pts) {
   if (pts.length <= 2) return pts;
-  const lats = pts.map(p=>p.lat).sort((a,b)=>a-b);
-  const lngs = pts.map(p=>p.lng).sort((a,b)=>a-b);
-  const midLat = lats[Math.floor(lats.length/2)];
-  const midLng = lngs[Math.floor(lngs.length/2)];
-  return pts.filter(p => distKm({lat:midLat,lng:midLng}, p) <= outlierKm);
+  return pts.filter((p, i) => {
+    if (i === 0 || i === pts.length - 1) return true;
+    const dPrev = distKm(pts[i-1], p);
+    const dNext = distKm(p, pts[i+1]);
+    const dSkip = distKm(pts[i-1], pts[i+1]);
+    // 前後両方にoutlierKm以上とんでいて、かつ前後を直接つないだきょりの3倍以上ならのぞく
+    return !(dPrev > outlierKm && dNext > outlierKm && dPrev + dNext > dSkip * 3);
+  });
 }
 
 function clearLayers() { layers.forEach(l=>map.removeLayer(l)); layers=[]; }
@@ -243,21 +246,27 @@ document.getElementById('btn-all').addEventListener('click', showAll);
 
 // ---- Calendar ----
 const DOW = ['日','月','火','水','木','金','土'];
+const MONTHS_SHOW = 6;
 
-function renderCalendar() {
-  document.getElementById('cal-title').textContent = calYear+'年 '+(calMonth+1)+'月';
-  const grid = document.getElementById('cal-grid');
-  grid.innerHTML = '';
+function renderOneMonth(year, month, activeKey) {
+  const block = document.createElement('div');
+  block.className = 'cal-month-block';
+  block.dataset.ym = year+'-'+String(month+1).padStart(2,'0');
+
+  const label = document.createElement('div');
+  label.className = 'cal-month-label';
+  label.textContent = year+'年 '+(month+1)+'月';
+  block.appendChild(label);
+
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
   DOW.forEach(d => { const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
 
-  const firstDay = new Date(calYear,calMonth,1).getDay();
-  const daysInMonth = new Date(calYear,calMonth+1,0).getDate();
-  const activeKey = currentIdx>=0 ? dateKeys[currentIdx] : null;
-
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
   for (let i=0;i<firstDay;i++) { const el=document.createElement('div'); el.className='cal-day'; grid.appendChild(el); }
-
   for (let d=1;d<=daysInMonth;d++) {
-    const key = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const key = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const el = document.createElement('div');
     el.className = 'cal-day';
     el.textContent = d;
@@ -269,6 +278,21 @@ function renderCalendar() {
     if (key===activeKey) el.classList.add('active');
     grid.appendChild(el);
   }
+  block.appendChild(grid);
+  return block;
+}
+
+function renderCalendar() {
+  const scroll = document.getElementById('cal-scroll');
+  const activeKey = currentIdx>=0 ? dateKeys[currentIdx] : null;
+  scroll.innerHTML = '';
+  for (let i=0; i<MONTHS_SHOW; i++) {
+    let m = calMonth - i;
+    let y = calYear;
+    while (m < 0) { m += 12; y--; }
+    scroll.appendChild(renderOneMonth(y, m, activeKey));
+  }
+  document.getElementById('cal-title').textContent = calYear+'年 '+(calMonth+1)+'月';
 }
 
 document.getElementById('cal-prev').addEventListener('click', ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
