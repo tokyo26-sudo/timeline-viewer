@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Viewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: #2a2a38;
+    --accent: #7c6af7;
+    --accent2: #f76a8a;
+    --accent3: #6af7c8;
+    --text: #e8e8f0;
+    --text2: #8888a8;
+    --text3: #555570;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    flex-shrink: 0;
+    z-index: 1000;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  .upload-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .upload-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    color: var(--text2);
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .upload-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124,106,247,0.08);
+  }
+
+  #file-input { display: none; }
+
+  .stats {
+    font-size: 10px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+
+  .stats span { color: var(--accent3); }
+
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 56px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 12px 14px 8px;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header button {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+    padding: 2px 4px;
+  }
+
+  .sidebar-header button:hover { color: var(--accent); }
+
+  .date-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .date-list::-webkit-scrollbar { width: 3px; }
+  .date-list::-webkit-scrollbar-track { background: transparent; }
+  .date-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .month-group {}
+
+  .month-label {
+    padding: 8px 14px 4px;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+  }
+
+  .date-item {
+    padding: 7px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+    border-left: 2px solid transparent;
+    font-size: 11px;
+  }
+
+  .date-item:hover { background: var(--surface2); }
+
+  .date-item.active {
+    background: rgba(124,106,247,0.12);
+    border-left-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .date-name { flex: 1; color: inherit; }
+  .date-pts {
+    font-size: 9px;
+    color: var(--text3);
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 10px;
+  }
+
+  .date-item.active .date-pts {
+    background: rgba(124,106,247,0.2);
+    color: var(--accent);
+  }
+
+  /* Map */
+  #map {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    background: #0f0f18;
+    position: relative;
+  }
+
+  /* Empty state */
+  .empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+    background: var(--surface);
+    pointer-events: none;
+  }
+
+  .empty-state.hidden { display: none; }
+
+  .empty-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: var(--text3);
+  }
+
+  .empty-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text2);
+  }
+
+  .empty-sub {
+    font-size: 10px;
+    color: var(--text3);
+    text-align: center;
+    line-height: 1.8;
+    max-width: 300px;
+  }
+
+  .empty-sub code {
+    color: var(--accent3);
+    background: rgba(106, 247, 200, 0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* Info panel */
+  .info-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 12px;
+    z-index: 800;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 10px;
+    color: var(--text2);
+    min-width: 160px;
+    display: none;
+  }
+
+  .info-panel.visible { display: block; }
+
+  .info-date {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 3px;
+  }
+
+  .info-val { color: var(--accent3); }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    gap: 12px;
+    display: none;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text { font-size: 11px; color: var(--text2); letter-spacing: 0.1em; }
+
+  /* Leaflet dark overrides */
+  .leaflet-tile-pane { filter: brightness(0.65) saturate(0.5) hue-rotate(200deg); }
+  .leaflet-control-zoom a {
+    background: var(--surface) !important;
+    color: var(--text2) !important;
+    border-color: var(--border) !important;
+  }
+  .leaflet-control-zoom a:hover { color: var(--accent) !important; }
+  .leaflet-control-attribution { display: none !important; }
+
+  /* No data notice */
+  .no-data {
+    color: var(--text3);
+    font-size: 11px;
+    padding: 20px 14px;
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  /* Nav arrows */
+  .nav-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .nav-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    TIMELINE VIEWER
+  </div>
+  <div class="upload-area">
+    <label class="upload-btn" for="file-input">
+      ＋ JSONファイルを読み込む
+    </label>
+    <input type="file" id="file-input" accept=".json" multiple>
+  </div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="btn-prev" disabled>◂</button>
+    <button class="nav-btn" id="btn-next" disabled>▸</button>
+  </div>
+  <div class="stats" id="stats" style="display:none">
+    <span id="stat-days">0</span>日 / <span id="stat-pts">0</span>点
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>DATE</span>
+      <button id="btn-all">すべて表示</button>
+    </div>
+    <div class="date-list" id="date-list">
+      <div class="no-data">JSONを読み込むと<br>ここに日付が表示されるヨ</div>
+    </div>
+  </div>
+
+  <div style="flex:1;position:relative;height:100%;">
+    <div id="map"></div>
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🗺</div>
+      <div class="empty-title">データを読み込んでネ</div>
+      <div class="empty-sub">
+        ぐーぐるたいむらいんの<br>
+        <code>Records.json</code> または<br>
+        <code>Semantic Location History</code>の<br>
+        JSONファイルをドロップ or 選択
+      </div>
+    </div>
+    <div class="info-panel" id="info-panel">
+      <div class="info-date" id="info-date">—</div>
+      <div class="info-row"><span>記録数</span><span class="info-val" id="info-pts">—</span></div>
+      <div class="info-row"><span>移動距離</span><span class="info-val" id="info-dist">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">データを解析中...</div>
+</div>
+
+<script>
+// Map init
+const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([35.6812, 139.7671], 10);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+
+let allDays = {}; // { "2023-04-01": [{lat,lng,ts},...] }
+let layers = [];
+let dateKeys = [];
+let currentIdx = -1;
+
+// Color palette for lines
+const LINE_COLORS = ['#7c6af7','#f76a8a','#6af7c8','#f7c96a','#6aadf7','#f76af0'];
+
+function getColor(i) { return LINE_COLORS[i % LINE_COLORS.length]; }
+
+function distKm(a, b) {
+  const R = 6371, dLat = (b.lat-a.lat)*Math.PI/180, dLng = (b.lng-a.lng)*Math.PI/180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+function totalDist(pts) {
+  let d = 0;
+  for (let i = 1; i < pts.length; i++) d += distKm(pts[i-1], pts[i]);
+  return d;
+}
+
+function clearLayers() {
+  layers.forEach(l => map.removeLayer(l));
+  layers = [];
+}
+
+function showDay(key, doZoom = true) {
+  clearLayers();
+  const pts = allDays[key];
+  if (!pts || pts.length === 0) return;
+
+  const latlngs = pts.map(p => [p.lat, p.lng]);
+  const color = getColor(dateKeys.indexOf(key));
+
+  // 2点以上ならライン描画
+  if (latlngs.length >= 2) {
+    const pl = L.polyline(latlngs, { color, weight: 2.5, opacity: 0.85, smoothFactor: 1.5 }).addTo(map);
+    layers.push(pl);
+    if (doZoom) map.fitBounds(pl.getBounds(), { padding: [60, 60] });
+  } else {
+    // 1点のときはその場所にズーム
+    if (doZoom) map.setView(latlngs[0], 14);
+  }
+
+  // マーカー表示
+  const showAll20 = latlngs.length <= 20;
+  if (showAll20) {
+    latlngs.forEach((ll, i) => {
+      const isFirst = i === 0, isLast = i === latlngs.length - 1;
+      const fc = isFirst ? '#6af7c8' : isLast ? '#f76a8a' : color;
+      const m = L.circleMarker(ll, { radius: isFirst||isLast ? 6 : 4, color, fillColor: fc, fillOpacity: 1, weight: 2 }).addTo(map);
+      if (isFirst) m.bindTooltip('START');
+      if (isLast && latlngs.length > 1) m.bindTooltip('END');
+      layers.push(m);
+    });
+  } else {
+    const s = L.circleMarker(latlngs[0], { radius: 6, color, fillColor: '#6af7c8', fillOpacity: 1, weight: 2 }).addTo(map);
+    s.bindTooltip('START'); layers.push(s);
+    const e = L.circleMarker(latlngs[latlngs.length-1], { radius: 6, color, fillColor: '#f76a8a', fillOpacity: 1, weight: 2 }).addTo(map);
+    e.bindTooltip('END'); layers.push(e);
+  }
+
+  // Info panel
+  const dist = totalDist(pts);
+  document.getElementById('info-date').textContent = key;
+  document.getElementById('info-pts').textContent = pts.length + ' 点';
+  document.getElementById('info-dist').textContent = dist < 1 ? (dist*1000).toFixed(0)+'m' : dist.toFixed(1)+'km';
+  document.getElementById('info-panel').classList.add('visible');
+}
+
+function showAll() {
+  clearLayers();
+  const bounds = [];
+  dateKeys.forEach((key, i) => {
+    const pts = allDays[key];
+    if (!pts || pts.length === 0) return;
+    const latlngs = pts.map(p => [p.lat, p.lng]);
+    const color = getColor(i);
+    // 2点以上ならライン、1点ならマーカーだけ
+    if (latlngs.length >= 2) {
+      const pl = L.polyline(latlngs, { color, weight: 1.8, opacity: 0.6 }).addTo(map);
+      layers.push(pl);
+    } else {
+      const m = L.circleMarker(latlngs[0], { radius: 4, color, fillColor: color, fillOpacity: 0.7, weight: 1.5 }).addTo(map);
+      layers.push(m);
+    }
+    bounds.push(...latlngs);
+  });
+  if (bounds.length > 0) map.fitBounds(L.latLngBounds(bounds), { padding: [30, 30] });
+  document.getElementById('info-panel').classList.remove('visible');
+
+  document.querySelectorAll('.date-item').forEach(el => el.classList.remove('active'));
+  currentIdx = -1;
+  updateNavBtns();
+}
+
+function selectDate(key) {
+  currentIdx = dateKeys.indexOf(key);
+  document.querySelectorAll('.date-item').forEach(el => el.classList.remove('active'));
+  const el = document.querySelector(`[data-key="${key}"]`);
+  if (el) {
+    el.classList.add('active');
+    el.scrollIntoView({ block: 'nearest' });
+  }
+  showDay(key);
+  updateNavBtns();
+}
+
+function updateNavBtns() {
+  document.getElementById('btn-prev').disabled = currentIdx <= 0;
+  document.getElementById('btn-next').disabled = currentIdx < 0 || currentIdx >= dateKeys.length - 1;
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentIdx > 0) selectDate(dateKeys[currentIdx - 1]);
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (currentIdx < dateKeys.length - 1) selectDate(dateKeys[currentIdx + 1]);
+});
+
+document.getElementById('btn-all').addEventListener('click', showAll);
+
+// Render date list
+function renderList() {
+  const list = document.getElementById('date-list');
+  list.innerHTML = '';
+  if (dateKeys.length === 0) {
+    list.innerHTML = '<div class="no-data">データなし</div>';
+    return;
+  }
+
+  let lastMonth = '';
+  dateKeys.forEach(key => {
+    const month = key.slice(0, 7);
+    if (month !== lastMonth) {
+      const ml = document.createElement('div');
+      ml.className = 'month-label';
+      ml.textContent = month;
+      list.appendChild(ml);
+      lastMonth = month;
+    }
+    const item = document.createElement('div');
+    item.className = 'date-item';
+    item.dataset.key = key;
+    const day = key.slice(5);
+    item.innerHTML = `<span class="date-name">${day}</span><span class="date-pts">${allDays[key].length}</span>`;
+    item.addEventListener('click', () => selectDate(key));
+    list.appendChild(item);
+  });
+}
+
+// "geo:lat,lng" 文字列をパース
+function parseGeo(str) {
+  if (!str) return null;
+  const m = String(str).match(/geo:([-\d.]+),([-\d.]+)/);
+  if (!m) return null;
+  return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+}
+
+// タイムスタンプ文字列 or 数値 → Date
+function parseTs(ts) {
+  if (!ts) return null;
+  const d = new Date(isNaN(ts) ? ts : Number(ts) > 1e12 ? Number(ts) : Number(ts) * 1000);
+  return isNaN(d) ? null : d;
+}
+
+function addPoint(lat, lng, ts) {
+  const d = parseTs(ts);
+  if (!d || !lat || !lng) return;
+  const key = d.toISOString().slice(0, 10);
+  if (!allDays[key]) allDays[key] = [];
+  allDays[key].push({ lat, lng });
+}
+
+// 新形式: トップレベルが配列 [ { visit:{...}, startTime, endTime }, ... ]
+function parseNewFormat(arr) {
+  arr.forEach(obj => {
+    const ts = obj.startTime || obj.endTime;
+
+    // visit
+    if (obj.visit) {
+      const geo = parseGeo(obj.visit.topCandidate?.placeLocation);
+      if (geo) addPoint(geo.lat, geo.lng, ts);
+    }
+
+    // activity
+    if (obj.activity) {
+      const start = parseGeo(obj.activity.start);
+      const end   = parseGeo(obj.activity.end);
+      if (start) addPoint(start.lat, start.lng, ts);
+      if (end)   addPoint(end.lat,   end.lng,   obj.endTime || ts);
+      // waypointPath
+      const wps = obj.activity.waypointPath?.waypoints || obj.activity.topCandidate?.type ? [] : [];
+      wps.forEach(wp => {
+        const g = parseGeo(wp.latLng || wp.placeLocation);
+        if (g) addPoint(g.lat, g.lng, ts);
+      });
+    }
+
+    // timelinePath（移動経路の点列）
+    if (obj.timelinePath) {
+      obj.timelinePath.forEach(pt => {
+        const g = parseGeo(pt.point);
+        const t = pt.time || ts;
+        if (g) addPoint(g.lat, g.lng, t);
+      });
+    }
+  });
+}
+
+// 旧形式: { locations: [...] }
+function parseRecords(data) {
+  const points = data.locations || [];
+  points.forEach(loc => {
+    let lat, lng;
+    if (loc.latitudeE7 !== undefined) { lat = loc.latitudeE7 / 1e7; lng = loc.longitudeE7 / 1e7; }
+    else if (loc.lat !== undefined)   { lat = loc.lat; lng = loc.lng; }
+    else return;
+    addPoint(lat, lng, loc.timestamp || loc.timestampMs);
+  });
+}
+
+// 旧Semantic形式: { timelineObjects: [...] } or { semanticSegments: [...] }
+function parseSemantic(data) {
+  const items = data.timelineObjects || data.semanticSegments || [];
+  items.forEach(obj => {
+    const visit = obj.placeVisit || obj.visit;
+    const act   = obj.activitySegment || obj.activity;
+
+    if (visit && visit.location) {
+      const lat = (visit.location.latitudeE7 || 0) / 1e7;
+      const lng = (visit.location.longitudeE7 || 0) / 1e7;
+      addPoint(lat, lng, visit.duration?.startTimestampMs || visit.startTime);
+    }
+
+    if (act) {
+      const wps = act.waypointPath?.waypoints || act.simplifiedRawPath?.points || [];
+      const ts  = act.duration?.startTimestampMs || act.startTime;
+      wps.forEach(wp => {
+        const lat = (wp.latE7 !== undefined ? wp.latE7 : (wp.lat||0) * 1e7) / 1e7;
+        const lng = (wp.lngE7 !== undefined ? wp.lngE7 : (wp.lng||0) * 1e7) / 1e7;
+        addPoint(lat, lng, ts);
+      });
+    }
+  });
+}
+
+// File input handler
+document.getElementById('file-input').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+
+  document.getElementById('loading').classList.add('active');
+  document.getElementById('empty-state').classList.add('hidden');
+
+  await new Promise(r => setTimeout(r, 50));
+
+  for (const file of files) {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (Array.isArray(data)) {
+        // 新形式: トップレベルが配列
+        parseNewFormat(data);
+      } else if (data.locations || data.rawSignals) {
+        parseRecords(data);
+      } else if (data.timelineObjects || data.semanticSegments) {
+        parseSemantic(data);
+      } else {
+        parseRecords(data);
+        parseSemantic(data);
+      }
+    } catch (err) {
+      console.warn('Parse error:', file.name, err);
+    }
+  }
+
+  // Sort and filter
+  dateKeys = Object.keys(allDays)
+    .filter(k => allDays[k].length > 0)
+    .sort();
+
+  renderList();
+  document.getElementById('stats').style.display = '';
+  document.getElementById('stat-days').textContent = dateKeys.length;
+  document.getElementById('stat-pts').textContent = Object.values(allDays).reduce((a,b) => a + b.length, 0).toLocaleString();
+
+  document.getElementById('loading').classList.remove('active');
+  e.target.value = '';
+
+  if (dateKeys.length > 0) {
+    showAll();
+  }
+});
+
+// Drag & drop support
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const fi = document.getElementById('file-input');
+  // Simulate file selection
+  const dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.json')).forEach(f => dt.items.add(f));
+  fi.files = dt.files;
+  fi.dispatchEvent(new Event('change'));
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') document.getElementById('btn-prev').click();
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') document.getElementById('btn-next').click();
+});
+</script>
+</body>
+</html>
