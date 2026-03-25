@@ -310,24 +310,25 @@ function renderOneMonth(year, month, activeKey) {
     if (key === activeKey && !rangeStart) el.classList.add('active');
 
     el.addEventListener('click', () => {
-      if (!hasData && dateKeys.length > 0) return;
+      if (!hasData) return;
       if (!rangeMode) {
-        // 1回目のクリック：範囲選択開始
-        rangeMode = true;
-        rangeStart = key;
-        rangeEnd = null;
-        updateRangeBar();
-        renderCalendar();
+        // 通常モード：1日表示
+        selectDate(key);
       } else if (!rangeEnd) {
-        // 2回目のクリック：範囲確定
+        // 範囲モード：終了日を選択
         rangeEnd = key;
         updateRangeBar();
         renderCalendar();
-      } else {
-        // 3回目：リセットして通常選択
-        rangeMode = false; rangeStart = null; rangeEnd = null;
-        selectDate(key);
       }
+    });
+    el.addEventListener('dblclick', () => {
+      if (!hasData) return;
+      // ダブルクリックで範囲選択開始
+      rangeMode = true;
+      rangeStart = key;
+      rangeEnd = null;
+      updateRangeBar();
+      renderCalendar();
     });
     grid.appendChild(el);
   }
@@ -443,7 +444,15 @@ function renderYearGrid() {
 document.getElementById('outlier-km').addEventListener('input', e => {
   outlierKm = parseInt(e.target.value);
   document.getElementById('outlier-val').textContent = outlierKm;
-  if (currentIdx>=0) showDay(dateKeys[currentIdx], false);
+  if (currentIdx >= 0) {
+    showDay(dateKeys[currentIdx], false);
+  } else if (rangeStart && rangeEnd) {
+    const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+    const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+    showRange(lo, hi);
+  } else {
+    showAll();
+  }
 });
 
 // ---- Parse ----
