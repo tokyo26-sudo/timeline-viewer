@@ -88,7 +88,7 @@
   .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { font-size: 11px; color: var(--text2); letter-spacing: 0.1em; }
-  .leaflet-tile-pane { filter: brightness(0.65) saturate(0.5) hue-rotate(200deg); }
+  .leaflet-tile-pane { filter: brightness(0.88) saturate(0.75) hue-rotate(200deg) contrast(1.15); }
   .leaflet-control-zoom a { background: var(--surface) !important; color: var(--text2) !important; border-color: var(--border) !important; }
   .leaflet-control-zoom a:hover { color: var(--accent) !important; }
   .leaflet-control-attribution { display: none !important; }
@@ -444,6 +444,15 @@ function renderYearGrid() {
 document.getElementById('outlier-km').addEventListener('input', e => {
   outlierKm = parseInt(e.target.value);
   document.getElementById('outlier-val').textContent = outlierKm;
+  if (currentIdx >= 0) {
+    showDay(dateKeys[currentIdx], false);
+  } else if (rangeStart && rangeEnd) {
+    const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+    const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+    showRange(lo, hi);
+  } else if (dateKeys.length > 0) {
+    showAll();
+  }
   if (currentIdx >= 0) {
     showDay(dateKeys[currentIdx], false);
   } else if (rangeStart && rangeEnd) {
