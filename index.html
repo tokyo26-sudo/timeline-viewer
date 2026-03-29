@@ -159,7 +159,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.2</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.2.1</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -725,14 +725,16 @@ document.getElementById('btn-capture').addEventListener('click', () => {
     const fs = 18;
     ctx.font = 'bold ' + fs + 'px monospace';
     const tw = ctx.measureText(key).width;
-    const bx = canvas.width - tw - pad * 3;
-    const by = canvas.height - fs - pad * 2;
-    const bw = tw + pad * 2;
-    const bh = fs + pad;
-    ctx.fillStyle = 'rgba(10,10,15,0.80)';
-    ctx.fillRect(bx, by, bw, bh);
+    const tx = canvas.width - tw - pad * 2;
+    const ty = canvas.height - pad;
+    // ふちどり（くろ）
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(key, tx, ty);
+    // テキスト（水色）
     ctx.fillStyle = '#6af7c8';
-    ctx.fillText(key, bx + pad, by + bh - pad * 0.3);
+    ctx.fillText(key, tx, ty);
     const a = document.createElement('a');
     a.download = 'timeline-' + now + '.png';
     a.href = canvas.toDataURL('image/png');
