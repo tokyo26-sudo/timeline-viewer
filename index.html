@@ -110,11 +110,11 @@
   </div>
   <div class="header-right">
     <div class="filter-wrap" id="filter-wrap" style="display:none">
-      外れ値:
+      <span id="lbl-outlier">外れ値:</span>
       <input type="range" id="outlier-km" min="50" max="1000" step="50" value="300">
       <span class="filter-val"><span id="outlier-val" style="display:inline-block;width:28px;text-align:right;">300</span>km</span>
       &nbsp;|&nbsp;
-      速度上限:
+      <span id="lbl-speed">速度上限:</span>
       <input type="range" id="speed-limit" min="100" max="1200" step="100" value="600">
       <span class="filter-val"><span id="speed-val" style="display:inline-block;width:32px;text-align:right;">600</span>km/h</span>
     </div>
@@ -133,6 +133,7 @@
       </label>
       <button class="nav-btn" id="btn-theme" title="地図テーマ切替">🌙</button>
       <button class="nav-btn" id="btn-capture" title="キャプチャ">📷</button>
+      <button class="nav-btn" id="btn-lang" title="言語切替" style="font-size:11px;letter-spacing:0.05em;">EN</button>
       <button class="nav-btn" id="btn-help" title="ヘルプ" style="font-weight:700;">?</button>
     </div>
   </div>
@@ -160,7 +161,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.3.0</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.0</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -176,16 +177,16 @@
 
 <div id="help-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(10,10,15,0.8);align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;max-width:380px;width:90%;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);line-height:2;">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:14px;">使い方</div>
-    <div><span style="color:var(--accent3);">📂</span> JSON読み込む</div>
-    <div style="color:var(--text3);padding-left:20px;font-size:11px;margin-bottom:8px;">GoogleタイムラインのJSON形式のファイルを読み込む</div>
-    <div><span style="color:var(--accent3);">📅</span> 日付をクリック → 1日表示</div>
-    <div><span style="color:var(--accent3);">📅</span> 日付をダブルクリック → 期間選択開始</div>
-    <div style="color:var(--text3);padding-left:20px;font-size:11px;margin-bottom:8px;">終了日をクリックして「この期間を表示」</div>
-    <div><span style="color:var(--accent3);">⋰／</span> トグル → 点/線モード切替</div>
-    <div><span style="color:var(--accent3);">◂▸</span> → 前後の日に移動（キーボードの←→も可）</div>
-    <div><span style="color:var(--accent3);">🌙☀️</span> → 地図テーマ切替</div>
-    <div><span style="color:var(--accent3);">📷</span> → 地図をキャプチャ保存</div>
+    <div id="help-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:14px;">使い方</div>
+    <div><span style="color:var(--accent3);">📂</span> <span id="help-load-label">JSON読み込む</span></div>
+    <div id="help-load-sub" style="color:var(--text3);padding-left:20px;font-size:11px;margin-bottom:8px;">GoogleタイムラインのJSON形式のファイルを読み込む</div>
+    <div id="help-click"><span style="color:var(--accent3);">📅</span> 日付をクリック → 1日表示</div>
+    <div id="help-dbl"><span style="color:var(--accent3);">📅</span> 日付をダブルクリック → 期間選択開始</div>
+    <div id="help-dbl-sub" style="color:var(--text3);padding-left:20px;font-size:11px;margin-bottom:8px;">終了日をクリックして「この期間を表示」</div>
+    <div id="help-toggle"><span style="color:var(--accent3);">⋰／</span> トグル → 点/線モード切替</div>
+    <div id="help-nav"><span style="color:var(--accent3);">◂▸</span> → 前後の日に移動（キーボードの←→も可）</div>
+    <div id="help-theme"><span style="color:var(--accent3);">🌙☀️</span> → 地図テーマ切替</div>
+    <div id="help-capture"><span style="color:var(--accent3);">📷</span> → 地図をキャプチャ保存</div>
     <div style="margin-top:14px;text-align:center;">
       <button class="nav-btn" id="help-close" style="padding:6px 24px;">閉じる</button>
     </div>
@@ -223,6 +224,91 @@ let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let outlierKm = 300;
 let speedLimitKmh = 600;
 let rangeStart = null, rangeEnd = null, rangeMode = false;
+let lang = 'ja';
+
+const I18N = {
+  ja: {
+    loadBtn: '＋ JSON読み込む',
+    showAll: '全期間を表示',
+    hideAll: '全期間を非表示',
+    outlier: '外れ値:',
+    speed: '速度上限:',
+    kmUnit: 'km',
+    kmhUnit: 'km/h',
+    emptyTitle: 'データを読み込んでネ',
+    emptySub: 'ぐーぐるたいむらいんの<br><code>Records.json</code> または<br><code>Semantic Location History</code>の<br>JSONをドロップ or 選択',
+    helpTitle: '使い方',
+    helpLoad: 'JSON読み込む',
+    helpLoadSub: 'GoogleタイムラインのJSON形式のファイルを読み込む',
+    helpClick: '日付をクリック → 1日表示',
+    helpDbl: '日付をダブルクリック → 期間選択開始',
+    helpDblSub: '終了日をクリックして「この期間を表示」',
+    helpToggle: '⋰／ トグル → 点/線モード切替',
+    helpNav: '◂▸ → 前後の日に移動（キーボードの←→も可）',
+    helpTheme: '🌙☀️ → 地図テーマ切替',
+    helpCapture: '📷 → 地図をキャプチャ保存',
+    helpClose: '閉じる',
+    infoRecords: '記録数',
+    infoDist: '移動距離',
+    rangeBtnShow: 'この期間を表示',
+    rangeInfoWait: '終了日をえらんでネ',
+    days: '日',
+    pts: '点',
+    rangeShow: 'この期間を表示',
+  },
+  en: {
+    loadBtn: '＋ Load JSON',
+    showAll: 'Show All',
+    hideAll: 'Hide All',
+    outlier: 'Outlier:',
+    speed: 'Max Speed:',
+    kmUnit: 'km',
+    kmhUnit: 'km/h',
+    emptyTitle: 'Load your data',
+    emptySub: 'Drop or select a<br><code>Google Timeline JSON</code><br>file here',
+    helpTitle: 'How to use',
+    helpLoad: 'Load JSON',
+    helpLoadSub: 'Load a Google Timeline JSON file',
+    helpClick: 'Click date → Show day',
+    helpDbl: 'Double-click date → Start range selection',
+    helpDblSub: 'Click end date, then tap "Show Range"',
+    helpToggle: '⋰／ Toggle → Switch dot/line mode',
+    helpNav: '◂▸ → Previous/next day (arrow keys work too)',
+    helpTheme: '🌙☀️ → Switch map theme',
+    helpCapture: '📷 → Save map as image',
+    helpClose: 'Close',
+    infoRecords: 'Points',
+    infoDist: 'Distance',
+    rangeBtnShow: 'Show Range',
+    rangeInfoWait: 'Select end date',
+    days: ' days',
+    pts: ' pts',
+    rangeShow: 'Show Range',
+  }
+};
+
+function applyLang() {
+  const t = I18N[lang];
+  document.querySelector('.upload-btn').textContent = t.loadBtn;
+  document.getElementById('btn-all').textContent = t.showAll;
+  document.getElementById('btn-clear').textContent = t.hideAll;
+  document.getElementById('lbl-outlier').textContent = t.outlier;
+  document.getElementById('lbl-speed').textContent = t.speed;
+  document.querySelector('.empty-title').textContent = t.emptyTitle;
+  document.querySelector('.empty-sub').innerHTML = t.emptySub;
+  document.getElementById('help-title').textContent = t.helpTitle;
+  document.getElementById('help-load-label').textContent = t.helpLoad;
+  document.getElementById('help-load-sub').textContent = t.helpLoadSub;
+  document.getElementById('help-click').textContent = '📅 ' + t.helpClick;
+  document.getElementById('help-dbl').textContent = '📅 ' + t.helpDbl;
+  document.getElementById('help-dbl-sub').textContent = t.helpDblSub;
+  document.getElementById('help-toggle').textContent = t.helpToggle;
+  document.getElementById('help-nav').textContent = t.helpNav;
+  document.getElementById('help-theme').textContent = t.helpTheme;
+  document.getElementById('help-capture').textContent = t.helpCapture;
+  document.getElementById('help-close').textContent = t.helpClose;
+  document.getElementById('range-show').textContent = t.rangeShow;
+}
 
 const LINE_COLORS = ['#7c6af7','#f76a8a','#6af7c8','#f7c96a','#6aadf7','#f76af0'];
 function getColor(i) { return LINE_COLORS[i % LINE_COLORS.length]; }
@@ -725,6 +811,12 @@ document.addEventListener('keydown',e=>{
 });
 
 // キャプチャ
+document.getElementById('btn-lang').addEventListener('click', () => {
+  lang = lang === 'ja' ? 'en' : 'ja';
+  document.getElementById('btn-lang').textContent = lang === 'ja' ? 'EN' : 'JA';
+  applyLang();
+});
+
 document.getElementById('btn-help').addEventListener('click', () => {
   document.getElementById('help-modal').style.display = 'flex';
 });
@@ -809,6 +901,7 @@ document.getElementById('btn-display').addEventListener('change', e => {
 });
 
 renderCalendar();
+applyLang();
 // トグルの初期状態（線モード=checked）
 const btnDisplay = document.getElementById('btn-display');
 btnDisplay.checked = true;
