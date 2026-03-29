@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Viewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c26;
+    --border: #2a2a38; --accent: #7c6af7; --accent2: #f76a8a;
+    --accent3: #6af7c8; --text: #e8e8f0; --text2: #8888a8; --text3: #555570;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--surface); flex-shrink: 0; z-index: 1000; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.08em; color: var(--text); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .logo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .upload-btn { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px dashed var(--border); color: var(--text2); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; transition: all 0.2s; white-space: nowrap; }
+  .upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #file-input { display: none; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .filter-wrap { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text3); white-space: nowrap; }
+  .filter-wrap input[type=range] { width: 80px; accent-color: var(--accent); }
+  .filter-val { color: var(--accent3); min-width: 40px; }
+  .stats { font-size: 10px; color: var(--text3); white-space: nowrap; }
+  .stats span { color: var(--accent3); }
+  .nav-btns { display: flex; gap: 3px; }
+  .nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); padding: 4px 9px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .main { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 48px); }
+  .sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .cal-toolbar { padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .cal-toolbar button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
+  .cal-toolbar button:hover { color: var(--accent); }
+  .cal-toolbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--text); cursor: pointer; user-select: none; }
+  .cal-toolbar-title:hover { color: var(--accent); }
+  .cal-scroll { flex: 1; overflow-y: auto; padding: 0 0 8px; }
+  .cal-scroll::-webkit-scrollbar { width: 3px; }
+  .cal-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .cal-month-block { padding: 8px 12px 4px; }
+  .cal-month-label { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 4px; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-dow { font-size: 9px; color: var(--text3); text-align: center; padding: 2px 0; }
+  .cal-day { font-size: 10px; text-align: center; padding: 5px 2px; border-radius: 4px; cursor: default; color: var(--text3); position: relative; line-height: 1; }
+  .cal-day.has-data { color: var(--text); cursor: pointer; background: var(--surface2); }
+  .cal-day.has-data:hover { background: rgba(124,106,247,0.2); color: var(--accent); }
+  .cal-day.active { background: var(--accent) !important; color: #fff !important; }
+  .cal-day .dot { position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 3px; border-radius: 50%; background: var(--accent3); }
+  .cal-all-btn { margin: 0 12px 8px; padding: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--text2); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; width: calc(100% - 24px); transition: all 0.15s; letter-spacing: 0.05em; flex-shrink: 0; }
+  .cal-all-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .year-grid { padding: 4px 8px; display: none; flex-shrink: 0; }
+  .year-grid.visible { display: block; }
+  .year-item { padding: 5px 8px; cursor: pointer; border-radius: 4px; font-size: 11px; color: var(--text2); }
+  .year-item:hover { background: var(--surface2); color: var(--accent); }
+  .month-item { padding: 4px 8px 4px 20px; cursor: pointer; border-radius: 4px; font-size: 10px; color: var(--text3); }
+  .month-item:hover { background: var(--surface2); color: var(--text); }
+  .cal-day.range-start { background: var(--accent) !important; color: #fff !important; border-radius: 4px 0 0 4px; }
+  .cal-day.range-end { background: var(--accent) !important; color: #fff !important; border-radius: 0 4px 4px 0; }
+  .cal-day.in-range { background: rgba(124,106,247,0.25) !important; color: var(--text) !important; border-radius: 0; }
+  .range-bar { padding: 6px 12px; border-top: 1px solid var(--border); flex-shrink: 0; display: none; }
+  .range-bar.visible { display: block; }
+  .range-info { font-size: 10px; color: var(--text2); margin-bottom: 6px; line-height: 1.6; }
+  .range-info span { color: var(--accent3); }
+  .range-btns { display: flex; gap: 6px; }
+  .range-btn { flex: 1; padding: 5px; background: var(--accent); border: none; border-radius: 4px; color: #fff; font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; transition: opacity 0.15s; }
+  .range-btn:hover { opacity: 0.85; }
+  .range-btn.cancel { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
+  .range-btn.cancel:hover { border-color: var(--accent2); color: var(--accent2); }
+  #map { flex: 1; width: 100%; height: 100%; min-height: 400px; background: #0f0f18; }
+  .map-wrap { flex: 1; position: relative; height: 100%; }
+  .empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 10; background: var(--surface); pointer-events: none; }
+  .empty-state.hidden { display: none; }
+  .empty-icon { font-size: 28px; color: var(--text3); }
+  .empty-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text2); }
+  .empty-sub { font-size: 10px; color: var(--text3); text-align: center; line-height: 1.8; max-width: 280px; }
+  .empty-sub code { color: var(--accent3); background: rgba(106,247,200,0.08); padding: 1px 5px; border-radius: 3px; }
+  .info-panel { position: absolute; bottom: 16px; right: 12px; z-index: 800; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 10px; color: var(--text2); min-width: 150px; display: none; }
+  .info-panel.visible { display: block; }
+  .info-date { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--text); margin-bottom: 5px; }
+  .info-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 2px; }
+  .info-val { color: var(--accent3); }
+  .loading-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 12px; }
+  .loading-overlay.active { display: flex; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 11px; color: var(--text2); letter-spacing: 0.1em; }
+  .leaflet-tile-pane { filter: brightness(0.92) saturate(1.4) hue-rotate(200deg) contrast(1.1); }
+  .leaflet-control-zoom a { background: var(--surface) !important; color: var(--text2) !important; border-color: var(--border) !important; }
+  .leaflet-control-zoom a:hover { color: var(--accent) !important; }
+  .leaflet-control-attribution { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-dot"></div>TIMELINE VIEWER</div>
+  <label class="upload-btn" for="file-input">＋ JSON読み込む</label>
+  <input type="file" id="file-input" accept=".json" multiple>
+  <div class="nav-btns">
+    <button class="nav-btn" id="btn-prev" disabled>◂</button>
+    <button class="nav-btn" id="btn-next" disabled>▸</button>
+  </div>
+  <div class="header-right">
+    <div class="filter-wrap" id="filter-wrap" style="display:none">
+      外れ値:
+      <input type="range" id="outlier-km" min="50" max="1000" step="50" value="300">
+      <span class="filter-val"><span id="outlier-val">300</span>km以内</span>
+      &nbsp;|&nbsp;
+      速度上限:
+      <input type="range" id="speed-limit" min="100" max="1200" step="100" value="600">
+      <span class="filter-val"><span id="speed-val">600</span>km/h</span>
+    </div>
+    <div class="stats" id="stats" style="display:none">
+      <span id="stat-days">0</span>日 / <span id="stat-pts">0</span>点
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="cal-toolbar">
+      <button id="cal-prev">◂</button>
+      <div class="cal-toolbar-title" id="cal-title">—</div>
+      <button id="cal-next">▸</button>
+    </div>
+    <div class="year-grid" id="year-grid"></div>
+    <div class="range-bar" id="range-bar">
+      <div class="range-info" id="range-info">—</div>
+      <div class="range-btns">
+        <button class="range-btn" id="range-show">この期間を表示</button>
+        <button class="range-btn cancel" id="range-cancel">✕</button>
+      </div>
+    </div>
+    <button class="cal-all-btn" id="btn-all">すべて表示</button>
+    <div class="cal-scroll" id="cal-scroll"></div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🗺</div>
+      <div class="empty-title">データを読み込んでネ</div>
+      <div class="empty-sub">ぐーぐるたいむらいんの<br><code>Records.json</code> または<br><code>Semantic Location History</code>の<br>JSONをドロップ or 選択</div>
+    </div>
+    <div class="info-panel" id="info-panel">
+      <div class="info-date" id="info-date">—</div>
+      <div class="info-row"><span>記録数</span><span class="info-val" id="info-pts">—</span></div>
+      <div class="info-row"><span>移動距離</span><span class="info-val" id="info-dist">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">データを解析中...</div>
+</div>
+
+<script>
+const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([35.6812, 139.7671], 10);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+
+let allDays = {}, layers = [], dateKeys = [], currentIdx = -1;
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+let outlierKm = 300;
+let speedLimitKmh = 600;
+let rangeStart = null, rangeEnd = null, rangeMode = false;
+
+const LINE_COLORS = ['#7c6af7','#f76a8a','#6af7c8','#f7c96a','#6aadf7','#f76af0'];
+function getColor(i) { return LINE_COLORS[i % LINE_COLORS.length]; }
+
+function distKm(a, b) {
+  const R = 6371, dLat = (b.lat-a.lat)*Math.PI/180, dLng = (b.lng-a.lng)*Math.PI/180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+function totalDist(pts) { let d=0; for(let i=1;i<pts.length;i++) d+=distKm(pts[i-1],pts[i]); return d; }
+
+function filterOutliers(pts) {
+  if (pts.length <= 2) return pts;
+  return pts.filter((p, i) => {
+    if (i === 0 || i === pts.length - 1) return true;
+    const dPrev = distKm(pts[i-1], p);
+    const dNext = distKm(p, pts[i+1]);
+    const dSkip = distKm(pts[i-1], pts[i+1]);
+    // 前後両方にoutlierKm以上とんでいて、かつ前後を直接つないだきょりの3倍以上ならのぞく
+    return !(dPrev > outlierKm && dNext > outlierKm && dPrev + dNext > dSkip * 3);
+  });
+}
+
+function filterBySpeed(pts) {
+  // 前後の点との速度がspeedLimitKmh以上の線をひかない
+  // 時刻じょうほうがないばあいはそのままかえす
+  if (pts.length <= 1) return pts;
+  // 速度チェック：隣接点間の速度が上限超えたらその区間をカット
+  // 点はのこすが、速度超過の区間はあとでポリラインをわける
+  return pts;
+}
+
+// 速度超過の区間でポリラインをわけてかく
+function polylineSegments(pts, color, weight, opacity) {
+  if (pts.length < 2) return [];
+  const segs = [];
+  let cur = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const d = distKm(pts[i-1], pts[i]);
+    // 時刻があれば速度チェック、なければきょりだけでチェック（300km以上の直線はカット）
+    const tPrev = pts[i-1].ts, tCur = pts[i].ts;
+    let skip = false;
+    if (tPrev && tCur) {
+      const hours = Math.abs(tCur - tPrev) / 3600000;
+      if (hours > 0 && d / hours > speedLimitKmh) skip = true;
+    }
+    if (skip) {
+      if (cur.length >= 2) segs.push([...cur]);
+      cur = [pts[i]];
+    } else {
+      cur.push(pts[i]);
+    }
+  }
+  if (cur.length >= 2) segs.push(cur);
+  return segs;
+}
+
+function clearLayers() { layers.forEach(l=>map.removeLayer(l)); layers=[]; }
+
+function showDay(key, doZoom=true) {
+  clearLayers();
+  const pts = allDays[key];
+  if (!pts || pts.length === 0) return;
+  const filtered = filterOutliers(pts);
+  const latlngs = filtered.map(p=>[p.lat,p.lng]);
+  if (!latlngs.length) return;
+  const color = getColor(dateKeys.indexOf(key));
+
+  const segs = polylineSegments(filtered, color, 2.5, 0.85);
+  if (segs.length > 0) {
+    const allBounds = [];
+    segs.forEach(seg => {
+      const ll = seg.map(p=>[p.lat,p.lng]);
+      const pl = L.polyline(ll, {color, weight:2.5, opacity:0.85, smoothFactor:1.5}).addTo(map);
+      layers.push(pl);
+      allBounds.push(...ll);
+    });
+    if (doZoom && allBounds.length > 0) map.fitBounds(L.latLngBounds(allBounds), {padding:[60,60]});
+  } else if (latlngs.length === 1) {
+    if (doZoom) map.setView(latlngs[0], 14);
+  }
+
+  if (latlngs.length <= 20) {
+    latlngs.forEach((ll,i) => {
+      const isFirst=i===0, isLast=i===latlngs.length-1;
+      const fc = isFirst?'#6af7c8':isLast?'#f76a8a':color;
+      const m = L.circleMarker(ll, {radius:isFirst||isLast?6:4, color, fillColor:fc, fillOpacity:1, weight:2}).addTo(map);
+      if (isFirst) m.bindTooltip('START');
+      if (isLast && latlngs.length>1) m.bindTooltip('END');
+      layers.push(m);
+    });
+  } else {
+    const s=L.circleMarker(latlngs[0],{radius:6,color,fillColor:'#6af7c8',fillOpacity:1,weight:2}).addTo(map);
+    s.bindTooltip('START'); layers.push(s);
+    const e=L.circleMarker(latlngs[latlngs.length-1],{radius:6,color,fillColor:'#f76a8a',fillOpacity:1,weight:2}).addTo(map);
+    e.bindTooltip('END'); layers.push(e);
+  }
+
+  const dist = totalDist(filtered);
+  document.getElementById('info-date').textContent = key;
+  document.getElementById('info-pts').textContent = filtered.length+' 点';
+  document.getElementById('info-dist').textContent = dist<1?(dist*1000).toFixed(0)+'m':dist.toFixed(1)+'km';
+  document.getElementById('info-panel').classList.add('visible');
+}
+
+function showAll() {
+  clearLayers();
+  const bounds = [];
+  dateKeys.forEach((key,i) => {
+    const pts = allDays[key];
+    if (!pts||!pts.length) return;
+    const latlngs = filterOutliers(pts).map(p=>[p.lat,p.lng]);
+    if (!latlngs.length) return;
+    const color = getColor(i);
+    if (latlngs.length>=2) { const pl=L.polyline(latlngs,{color,weight:1.8,opacity:0.6}).addTo(map); layers.push(pl); }
+    else { const m=L.circleMarker(latlngs[0],{radius:4,color,fillColor:color,fillOpacity:0.7,weight:1.5}).addTo(map); layers.push(m); }
+    bounds.push(...latlngs);
+  });
+  if (bounds.length>0) map.fitBounds(L.latLngBounds(bounds),{padding:[30,30]});
+  document.getElementById('info-panel').classList.remove('visible');
+  rangeMode=false; rangeStart=null; rangeEnd=null;
+  document.getElementById('range-bar').classList.remove('visible');
+  currentIdx=-1; updateNavBtns(); renderCalendar();
+}
+
+function selectDate(key) {
+  currentIdx = dateKeys.indexOf(key);
+  showDay(key);
+  updateNavBtns();
+  const [y,m] = key.split('-').map(Number);
+  calYear=y; calMonth=m-1;
+  renderCalendar();
+  document.getElementById('year-grid').classList.remove('visible');
+}
+
+function updateNavBtns() {
+  document.getElementById('btn-prev').disabled = currentIdx<=0;
+  document.getElementById('btn-next').disabled = currentIdx<0||currentIdx>=dateKeys.length-1;
+}
+
+document.getElementById('btn-prev').addEventListener('click', ()=>{ if(currentIdx>0) selectDate(dateKeys[currentIdx-1]); });
+document.getElementById('btn-next').addEventListener('click', ()=>{ if(currentIdx<dateKeys.length-1) selectDate(dateKeys[currentIdx+1]); });
+document.getElementById('btn-all').addEventListener('click', showAll);
+
+// ---- Calendar ----
+const DOW = ['日','月','火','水','木','金','土'];
+const MONTHS_SHOW = 6;
+
+function renderOneMonth(year, month, activeKey) {
+  const block = document.createElement('div');
+  block.className = 'cal-month-block';
+  block.dataset.ym = year+'-'+String(month+1).padStart(2,'0');
+
+  const label = document.createElement('div');
+  label.className = 'cal-month-label';
+  label.textContent = year+'年 '+(month+1)+'月';
+  block.appendChild(label);
+
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+  DOW.forEach(d => { const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
+
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  for (let i=0;i<firstDay;i++) { const el=document.createElement('div'); el.className='cal-day'; grid.appendChild(el); }
+  for (let d=1;d<=daysInMonth;d++) {
+    const key = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+    el.textContent = d;
+    const hasData = allDays[key]&&allDays[key].length>0;
+    if (hasData) {
+      el.classList.add('has-data');
+      const dot=document.createElement('div'); dot.className='dot'; el.appendChild(dot);
+    }
+    // 範囲ハイライト
+    if (rangeStart && rangeEnd) {
+      const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+      const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+      if (key === lo) el.classList.add('range-start');
+      else if (key === hi) el.classList.add('range-end');
+      else if (key > lo && key < hi) el.classList.add('in-range');
+    } else if (rangeStart && key === rangeStart) {
+      el.classList.add('range-start');
+    }
+    if (key === activeKey && !rangeStart) el.classList.add('active');
+
+    el.addEventListener('click', () => {
+      if (!hasData) return;
+      if (!rangeMode) {
+        // 通常モード：1日表示
+        selectDate(key);
+      } else if (!rangeEnd) {
+        // 範囲モード：終了日を選択
+        rangeEnd = key;
+        updateRangeBar();
+        renderCalendar();
+      }
+    });
+    el.addEventListener('dblclick', () => {
+      if (!hasData) return;
+      // ダブルクリックで範囲選択開始
+      rangeMode = true;
+      rangeStart = key;
+      rangeEnd = null;
+      updateRangeBar();
+      renderCalendar();
+    });
+    grid.appendChild(el);
+  }
+  block.appendChild(grid);
+  return block;
+}
+
+function updateRangeBar() {
+  const bar = document.getElementById('range-bar');
+  const info = document.getElementById('range-info');
+  if (!rangeStart) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  if (!rangeEnd) {
+    info.innerHTML = '開始: <span>'+rangeStart+'</span><br>終了日をえらんでネ';
+  } else {
+    const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+    const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+    const days = dateKeys.filter(k => k >= lo && k <= hi).length;
+    info.innerHTML = '<span>'+lo+'</span> 〜 <span>'+hi+'</span><br>'+days+'日分のデータ';
+  }
+}
+
+function renderCalendar() {
+  const scroll = document.getElementById('cal-scroll');
+  const activeKey = currentIdx>=0 ? dateKeys[currentIdx] : null;
+  scroll.innerHTML = '';
+  for (let i=0; i<MONTHS_SHOW; i++) {
+    let m = calMonth - i;
+    let y = calYear;
+    while (m < 0) { m += 12; y--; }
+    scroll.appendChild(renderOneMonth(y, m, activeKey));
+  }
+  document.getElementById('cal-title').textContent = calYear+'年 '+(calMonth+1)+'月';
+}
+
+document.getElementById('cal-prev').addEventListener('click', ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
+document.getElementById('cal-next').addEventListener('click', ()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); });
+
+document.getElementById('cal-title').addEventListener('click', ()=>{
+  const yg = document.getElementById('year-grid');
+  yg.classList.toggle('visible');
+  if (yg.classList.contains('visible')) renderYearGrid();
+});
+
+document.getElementById('range-show').addEventListener('click', () => {
+  if (!rangeStart || !rangeEnd) return;
+  const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+  const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+  showRange(lo, hi);
+});
+
+document.getElementById('range-cancel').addEventListener('click', () => {
+  rangeMode = false; rangeStart = null; rangeEnd = null;
+  document.getElementById('range-bar').classList.remove('visible');
+  renderCalendar();
+});
+
+function showRange(lo, hi) {
+  clearLayers();
+  const bounds = [];
+  const keys = dateKeys.filter(k => k >= lo && k <= hi);
+  keys.forEach((key, i) => {
+    const pts = allDays[key];
+    if (!pts||!pts.length) return;
+    const latlngs = filterOutliers(pts).map(p=>[p.lat,p.lng]);
+    if (!latlngs.length) return;
+    const color = getColor(i);
+    const segs3 = polylineSegments(filterOutliers(pts), color, 2, 0.75);
+    if (segs3.length > 0) { segs3.forEach(seg => { const pl=L.polyline(seg.map(p=>[p.lat,p.lng]),{color,weight:2,opacity:0.75}).addTo(map); layers.push(pl); }); }
+    else if (latlngs.length===1) { const m=L.circleMarker(latlngs[0],{radius:4,color,fillColor:color,fillOpacity:0.8,weight:1.5}).addTo(map); layers.push(m); }
+    bounds.push(...latlngs);
+  });
+  if (bounds.length > 0) map.fitBounds(L.latLngBounds(bounds), {padding:[30,30]});
+  document.getElementById('info-date').textContent = lo+' 〜 '+hi;
+  document.getElementById('info-pts').textContent = keys.length+' 日';
+  document.getElementById('info-dist').textContent = '—';
+  document.getElementById('info-panel').classList.add('visible');
+  currentIdx = -1; updateNavBtns();
+}
+
+function renderYearGrid() {
+  const yg = document.getElementById('year-grid');
+  yg.innerHTML = '';
+  const years = [...new Set(dateKeys.map(k=>k.slice(0,4)))].sort().reverse();
+  years.forEach(y => {
+    const yi = document.createElement('div');
+    yi.className = 'year-item';
+    yi.textContent = y+'年';
+    yi.addEventListener('click', e => {
+      e.stopPropagation();
+      const existing = yg.querySelector('[data-year="'+y+'"]');
+      if (existing) { existing.remove(); return; }
+      const ml = document.createElement('div');
+      ml.dataset.year = y;
+      const months = [...new Set(dateKeys.filter(k=>k.startsWith(y)).map(k=>k.slice(5,7)))].sort().reverse();
+      months.forEach(m => {
+        const mi = document.createElement('div');
+        mi.className = 'month-item';
+        mi.textContent = parseInt(m)+'月';
+        mi.addEventListener('click', e2 => {
+          e2.stopPropagation();
+          calYear=parseInt(y); calMonth=parseInt(m)-1;
+          renderCalendar();
+          yg.classList.remove('visible');
+        });
+        ml.appendChild(mi);
+      });
+      yi.after(ml);
+    });
+    yg.appendChild(yi);
+  });
+}
+
+document.getElementById('speed-limit').addEventListener('input', e => {
+  speedLimitKmh = parseInt(e.target.value);
+  document.getElementById('speed-val').textContent = speedLimitKmh;
+  if (currentIdx >= 0) {
+    showDay(dateKeys[currentIdx], false);
+  } else if (rangeStart && rangeEnd) {
+    const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+    const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+    showRange(lo, hi);
+  } else if (dateKeys.length > 0) {
+    showAll();
+  }
+});
+
+document.getElementById('outlier-km').addEventListener('input', e => {
+  outlierKm = parseInt(e.target.value);
+  document.getElementById('outlier-val').textContent = outlierKm;
+  if (currentIdx >= 0) {
+    showDay(dateKeys[currentIdx], false);
+  } else if (rangeStart && rangeEnd) {
+    const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+    const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+    showRange(lo, hi);
+  } else if (dateKeys.length > 0) {
+    showAll();
+  }
+  if (currentIdx >= 0) {
+    showDay(dateKeys[currentIdx], false);
+  } else if (rangeStart && rangeEnd) {
+    const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
+    const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
+    showRange(lo, hi);
+  } else {
+    showAll();
+  }
+});
+
+// ---- Parse ----
+function parseGeo(str) {
+  if (!str) return null;
+  const m = String(str).match(/geo:([-\d.]+),([-\d.]+)/);
+  return m ? {lat:parseFloat(m[1]),lng:parseFloat(m[2])} : null;
+}
+function parseTs(ts) {
+  if (!ts) return null;
+  const d = new Date(isNaN(ts)?ts:Number(ts)>1e12?Number(ts):Number(ts)*1000);
+  return isNaN(d)?null:d;
+}
+function addPoint(lat, lng, ts) {
+  const d = parseTs(ts);
+  if (!d||!lat||!lng) return;
+  const key = d.toISOString().slice(0,10);
+  if (!allDays[key]) allDays[key]=[];
+  allDays[key].push({lat, lng, ts: d.getTime()});
+}
+function parseNewFormat(arr) {
+  arr.forEach(obj => {
+    const ts = obj.startTime||obj.endTime;
+    if (obj.visit) { const g=parseGeo(obj.visit.topCandidate?.placeLocation); if(g) addPoint(g.lat,g.lng,ts); }
+    if (obj.activity) {
+      const s=parseGeo(obj.activity.start), e=parseGeo(obj.activity.end);
+      if(s) addPoint(s.lat,s.lng,ts); if(e) addPoint(e.lat,e.lng,obj.endTime||ts);
+    }
+    if (obj.timelinePath) obj.timelinePath.forEach(pt=>{ const g=parseGeo(pt.point); if(g) addPoint(g.lat,g.lng,pt.time||ts); });
+  });
+}
+function parseRecords(data) {
+  (data.locations||[]).forEach(loc => {
+    let lat,lng;
+    if(loc.latitudeE7!==undefined){lat=loc.latitudeE7/1e7;lng=loc.longitudeE7/1e7;}
+    else if(loc.lat!==undefined){lat=loc.lat;lng=loc.lng;} else return;
+    addPoint(lat,lng,loc.timestamp||loc.timestampMs);
+  });
+}
+function parseSemantic(data) {
+  (data.timelineObjects||data.semanticSegments||[]).forEach(obj => {
+    const visit=obj.placeVisit||obj.visit, act=obj.activitySegment||obj.activity;
+    if(visit&&visit.location){ const lat=(visit.location.latitudeE7||0)/1e7,lng=(visit.location.longitudeE7||0)/1e7; addPoint(lat,lng,visit.duration?.startTimestampMs||visit.startTime); }
+    if(act){ const ts=act.duration?.startTimestampMs||act.startTime; (act.waypointPath?.waypoints||act.simplifiedRawPath?.points||[]).forEach(wp=>{ const lat=(wp.latE7!==undefined?wp.latE7:(wp.lat||0)*1e7)/1e7,lng=(wp.lngE7!==undefined?wp.lngE7:(wp.lng||0)*1e7)/1e7; addPoint(lat,lng,ts); }); }
+  });
+}
+
+document.getElementById('file-input').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  document.getElementById('loading').classList.add('active');
+  document.getElementById('empty-state').classList.add('hidden');
+  await new Promise(r=>setTimeout(r,50));
+  for (const file of files) {
+    try {
+      const data = JSON.parse(await file.text());
+      if (Array.isArray(data)) parseNewFormat(data);
+      else if (data.locations||data.rawSignals) parseRecords(data);
+      else if (data.timelineObjects||data.semanticSegments) parseSemantic(data);
+      else { parseRecords(data); parseSemantic(data); }
+    } catch(err) { console.warn('Parse error:',file.name,err); }
+  }
+  // 各日の点をじかん順にソート
+  Object.keys(allDays).forEach(k => {
+    allDays[k].sort((a,b) => (a.ts||0) - (b.ts||0));
+  });
+  dateKeys = Object.keys(allDays).filter(k=>allDays[k].length>0).sort().reverse();
+  if (dateKeys.length>0) { const [y,m]=dateKeys[0].split('-').map(Number); calYear=y; calMonth=m-1; }
+  renderCalendar();
+  document.getElementById('stats').style.display='';
+  document.getElementById('filter-wrap').style.display='flex';
+  document.getElementById('stat-days').textContent=dateKeys.length;
+  document.getElementById('stat-pts').textContent=Object.values(allDays).reduce((a,b)=>a+b.length,0).toLocaleString();
+  document.getElementById('loading').classList.remove('active');
+  e.target.value='';
+  if (dateKeys.length>0) showAll();
+});
+
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{
+  e.preventDefault();
+  const fi=document.getElementById('file-input'),dt=new DataTransfer();
+  Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.json')).forEach(f=>dt.items.add(f));
+  fi.files=dt.files; fi.dispatchEvent(new Event('change'));
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') document.getElementById('btn-prev').click();
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') document.getElementById('btn-next').click();
+});
+
+renderCalendar();
+</script>
+</body>
+</html>
