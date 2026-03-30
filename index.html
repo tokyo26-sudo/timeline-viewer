@@ -132,7 +132,7 @@
         ／
       </label>
       <button class="nav-btn" id="btn-theme" title="地図テーマ切替">🌙</button>
-      <button class="nav-btn" id="btn-capture" title="キャプチャ">📷</button>
+
       <button class="nav-btn" id="btn-lang" title="言語切替" style="font-size:11px;letter-spacing:0.05em;">EN</button>
       <button class="nav-btn" id="btn-help" title="ヘルプ" style="font-weight:700;">?</button>
     </div>
@@ -161,7 +161,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.1</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.2</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -186,7 +186,7 @@
     <div id="help-toggle"><span style="color:var(--accent3);">⋰／</span> トグル → 点/線モード切替</div>
     <div id="help-nav"><span style="color:var(--accent3);">◂▸</span> → 前後の日に移動（キーボードの←→も可）</div>
     <div id="help-theme"><span style="color:var(--accent3);">🌙☀️</span> → 地図テーマ切替</div>
-    <div id="help-capture"><span style="color:var(--accent3);">📷</span> → 地図をキャプチャ保存</div>
+
     <div style="margin-top:14px;text-align:center;">
       <button class="nav-btn" id="help-close" style="padding:6px 24px;">閉じる</button>
     </div>
@@ -246,7 +246,7 @@ const I18N = {
     helpToggle: '⋰／ トグル → 点/線モード切替',
     helpNav: '◂▸ → 前後の日に移動（キーボードの←→も可）',
     helpTheme: '🌙☀️ → 地図テーマ切替',
-    helpCapture: '📷 → 地図をキャプチャ保存',
+
     helpClose: '閉じる',
     infoRecords: '記録数',
     infoDist: '移動距離',
@@ -275,7 +275,7 @@ const I18N = {
     helpToggle: '⋰／ Toggle → Switch dot/line mode',
     helpNav: '◂▸ → Previous/next day (arrow keys work too)',
     helpTheme: '🌙☀️ → Switch map theme',
-    helpCapture: '📷 → Save map as image',
+
     helpClose: 'Close',
     infoRecords: 'Points',
     infoDist: 'Distance',
@@ -305,7 +305,6 @@ function applyLang() {
   document.getElementById('help-toggle').textContent = t.helpToggle;
   document.getElementById('help-nav').textContent = t.helpNav;
   document.getElementById('help-theme').textContent = t.helpTheme;
-  document.getElementById('help-capture').textContent = t.helpCapture;
   document.getElementById('help-close').textContent = t.helpClose;
   document.getElementById('range-show').textContent = t.rangeShow;
 }
@@ -828,69 +827,7 @@ document.getElementById('help-modal').addEventListener('click', e => {
     document.getElementById('help-modal').style.display = 'none';
 });
 
-document.getElementById('btn-capture').addEventListener('click', () => {
-  let key;
-  if (currentIdx >= 0) {
-    key = dateKeys[currentIdx].replace(/-/g, '');
-  } else if (rangeStart && rangeEnd) {
-    const lo = (rangeStart < rangeEnd ? rangeStart : rangeEnd).replace(/-/g, '');
-    const hi = (rangeStart < rangeEnd ? rangeEnd : rangeStart).replace(/-/g, '');
-    key = lo + '-' + hi;
-  } else if (dateKeys.length > 0) {
-    const lo = dateKeys[dateKeys.length-1].replace(/-/g, '');
-    const hi = dateKeys[0].replace(/-/g, '');
-    key = lo + '-' + hi;
-  } else {
-    key = 'timeline';
-  }
-  const now = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  const mapEl = document.getElementById('map');
-  const w = mapEl.offsetWidth, h = mapEl.offsetHeight;
-  const out = document.createElement('canvas');
-  out.width = w; out.height = h;
-  const ctx = out.getContext('2d');
-  ctx.fillStyle = '#0a0a0f';
-  ctx.fillRect(0, 0, w, h);
-
-  const mapCanvas = mapEl.querySelector('canvas');
-  const svgEl = mapEl.querySelector('svg.leaflet-zoom-animated');
-
-  function finalize() {
-    const pad = 14, fs = 18;
-    ctx.font = 'bold ' + fs + 'px monospace';
-    const tw = ctx.measureText(key).width;
-    const tx = w - tw - pad * 2;
-    const ty = h - pad;
-    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-    ctx.lineWidth = 4; ctx.lineJoin = 'round';
-    ctx.strokeText(key, tx, ty);
-    ctx.fillStyle = '#6af7c8';
-    ctx.fillText(key, tx, ty);
-    const a = document.createElement('a');
-    a.download = 'timeline-' + now + '.png';
-    a.href = out.toDataURL('image/png');
-    a.click();
-  }
-
-  if (mapCanvas) ctx.drawImage(mapCanvas, 0, 0);
-
-  if (svgEl) {
-    const svgData = new XMLSerializer().serializeToString(svgEl);
-    const svgBlob = new Blob([svgData], {type:'image/svg+xml'});
-    const svgUrl = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = () => {
-      const r = svgEl.getBoundingClientRect(), mr = mapEl.getBoundingClientRect();
-      ctx.drawImage(img, r.left - mr.left, r.top - mr.top);
-      URL.revokeObjectURL(svgUrl);
-      finalize();
-    };
-    img.onerror = finalize;
-    img.src = svgUrl;
-  } else {
-    finalize();
-  }
-});
+document.
 
 // テーマきりかえ
 const THEMES = {
