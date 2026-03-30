@@ -6,7 +6,7 @@
 <title>Timeline Viewer</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-image@0.4.0/leaflet-image.js"></script>
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
   :root {
@@ -161,7 +161,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.0</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.1</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -841,31 +841,55 @@ document.getElementById('btn-capture').addEventListener('click', () => {
     const hi = dateKeys[0].replace(/-/g, '');
     key = lo + '-' + hi;
   } else {
-    key = '全期間';
+    key = 'timeline';
   }
   const now = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  leafletImage(map, (err, canvas) => {
-    if (err) { console.error('capture error:', err); return; }
-    const ctx = canvas.getContext('2d');
-    const pad = 14;
-    const fs = 18;
+  const mapEl = document.getElementById('map');
+  const w = mapEl.offsetWidth, h = mapEl.offsetHeight;
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+
+  const mapCanvas = mapEl.querySelector('canvas');
+  const svgEl = mapEl.querySelector('svg.leaflet-zoom-animated');
+
+  function finalize() {
+    const pad = 14, fs = 18;
     ctx.font = 'bold ' + fs + 'px monospace';
     const tw = ctx.measureText(key).width;
-    const tx = canvas.width - tw - pad * 2;
-    const ty = canvas.height - pad;
-    // ふちどり（くろ）
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.lineWidth = 4;
-    ctx.lineJoin = 'round';
+    const tx = w - tw - pad * 2;
+    const ty = h - pad;
+    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+    ctx.lineWidth = 4; ctx.lineJoin = 'round';
     ctx.strokeText(key, tx, ty);
-    // テキスト（水色）
     ctx.fillStyle = '#6af7c8';
     ctx.fillText(key, tx, ty);
     const a = document.createElement('a');
     a.download = 'timeline-' + now + '.png';
-    a.href = canvas.toDataURL('image/png');
+    a.href = out.toDataURL('image/png');
     a.click();
-  });
+  }
+
+  if (mapCanvas) ctx.drawImage(mapCanvas, 0, 0);
+
+  if (svgEl) {
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgData], {type:'image/svg+xml'});
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const r = svgEl.getBoundingClientRect(), mr = mapEl.getBoundingClientRect();
+      ctx.drawImage(img, r.left - mr.left, r.top - mr.top);
+      URL.revokeObjectURL(svgUrl);
+      finalize();
+    };
+    img.onerror = finalize;
+    img.src = svgUrl;
+  } else {
+    finalize();
+  }
 });
 
 // テーマきりかえ
