@@ -161,7 +161,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.3</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.4</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -289,24 +289,27 @@ const I18N = {
 
 function applyLang() {
   const t = I18N[lang];
-  document.querySelector('.upload-btn').textContent = t.loadBtn;
-  document.getElementById('btn-all').textContent = t.showAll;
-  document.getElementById('btn-clear').textContent = t.hideAll;
-  document.getElementById('lbl-outlier').textContent = t.outlier;
-  document.getElementById('lbl-speed').textContent = t.speed;
-  document.querySelector('.empty-title').textContent = t.emptyTitle;
-  document.querySelector('.empty-sub').innerHTML = t.emptySub;
-  document.getElementById('help-title').textContent = t.helpTitle;
-  document.getElementById('help-load-label').textContent = t.helpLoad;
-  document.getElementById('help-load-sub').textContent = t.helpLoadSub;
-  document.getElementById('help-click').textContent = '📅 ' + t.helpClick;
-  document.getElementById('help-dbl').textContent = '📅 ' + t.helpDbl;
-  document.getElementById('help-dbl-sub').textContent = t.helpDblSub;
-  document.getElementById('help-toggle').textContent = t.helpToggle;
-  document.getElementById('help-nav').textContent = t.helpNav;
-  document.getElementById('help-theme').textContent = t.helpTheme;
-  document.getElementById('help-close').textContent = t.helpClose;
-  document.getElementById('range-show').textContent = t.rangeShow;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const setq = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = val; };
+  const sethtml = (sel, val) => { const el = document.querySelector(sel); if (el) el.innerHTML = val; };
+  setq('.upload-btn', t.loadBtn);
+  set('btn-all', t.showAll);
+  set('btn-clear', t.hideAll);
+  set('lbl-outlier', t.outlier);
+  set('lbl-speed', t.speed);
+  setq('.empty-title', t.emptyTitle);
+  sethtml('.empty-sub', t.emptySub);
+  set('help-title', t.helpTitle);
+  set('help-load-label', t.helpLoad);
+  set('help-load-sub', t.helpLoadSub);
+  set('help-click', '📅 ' + t.helpClick);
+  set('help-dbl', '📅 ' + t.helpDbl);
+  set('help-dbl-sub', t.helpDblSub);
+  set('help-toggle', t.helpToggle);
+  set('help-nav', t.helpNav);
+  set('help-theme', t.helpTheme);
+  set('help-close', t.helpClose);
+  set('range-show', t.rangeShow);
 }
 
 const LINE_COLORS = ['#7c6af7','#f76a8a','#6af7c8','#f7c96a','#6aadf7','#f76af0'];
