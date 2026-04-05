@@ -161,7 +161,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.6</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.7</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -217,7 +217,7 @@ function resizeDots() {
 
 let currentTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
 let mapTheme = 'dark';
-let displayMode = 'line'; // 'line' or 'dot'
+let displayMode = 'dot'; // 'line' or 'dot'
 
 let allDays = {}, layers = [], dateKeys = [], currentIdx = -1;
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
@@ -877,10 +877,10 @@ renderCalendar();
 applyLang();
 // トグルの初期状態（線モード=checked）
 const btnDisplay = document.getElementById('btn-display');
-btnDisplay.checked = true;
-displayMode = 'line';
-document.getElementById('toggle-thumb').style.transform = 'translateX(14px)';
-document.getElementById('toggle-track').style.background = 'var(--accent)';
+btnDisplay.checked = false;
+displayMode = 'dot';
+document.getElementById('toggle-thumb').style.transform = 'translateX(0)';
+document.getElementById('toggle-track').style.background = 'var(--text3)';
 </script>
 </body>
 </html>
