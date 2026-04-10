@@ -118,12 +118,14 @@
       width: 100%;
       height: 320px !important;
       min-height: 280px;
+      max-height: 320px;
       order: 1;
       position: relative;
       flex-shrink: 0;
+      align-self: flex-start;
       display: block !important;
     }
-    #map { width: 100% !important; height: 320px !important; min-height: unset; display: block !important; }
+    #map { width: 100% !important; height: 100% !important; min-height: unset; display: block !important; }
     .cal-scroll { overflow: visible; max-height: none; }
     .year-grid.visible { display: block; }
     .cal-mobile-selects { display: flex; gap: 6px; padding: 6px 12px; }
@@ -220,7 +222,7 @@
   <div class="map-wrap">
     <div id="map"></div>
     <div class="gesture-hint" id="gesture-hint">👆👆 ゆびにほんでちずをうごかす</div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.6.0</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.6.1</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -961,8 +963,9 @@ function setMobileMapHeight() {
   const mapWrap = document.querySelector('.map-wrap');
   const mapEl = document.getElementById('map');
   mapWrap.style.height = mapH + 'px';
+  mapWrap.style.maxHeight = mapH + 'px';
   mapEl.style.height = mapH + 'px';
-  map.invalidateSize();
+  setTimeout(() => map.invalidateSize(), 50);
 }
 
 document.getElementById('cal-sel-year').addEventListener('change', e => {
