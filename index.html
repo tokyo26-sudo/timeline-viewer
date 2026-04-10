@@ -97,6 +97,36 @@
   .leaflet-control-attribution { display: none !important; }
   .line-popup .leaflet-popup-content-wrapper { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; }
   .line-popup .leaflet-popup-tip { background: var(--surface); }
+
+  /* ===== スマホレイアウト ===== */
+  @media (max-width: 768px) {
+    body { overflow: auto; height: auto; min-height: 100vh; }
+    header { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+    .header-right { width: 100%; flex-wrap: wrap; gap: 6px; }
+    .filter-wrap { flex-wrap: wrap; width: 100%; }
+    .filter-wrap input[type=range] { width: 60px; }
+    .stats { font-size: 10px; }
+    .main { flex-direction: column; height: auto; overflow: visible; }
+    .sidebar {
+      width: 100%;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      order: 2;
+      overflow: visible;
+    }
+    .map-wrap {
+      width: 100%;
+      height: 55vw;
+      min-height: 260px;
+      max-height: 60vh;
+      order: 1;
+      position: relative;
+    }
+    #map { width: 100%; height: 100%; min-height: unset; }
+    .cal-scroll { overflow: visible; max-height: none; }
+    /* スマホではyear-gridをインラインに */
+    .year-grid.visible { display: block; }
+  }
 </style>
 </head>
 <body>
@@ -161,7 +191,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.4.11</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.5.0</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -523,6 +553,8 @@ document.getElementById('btn-clear').addEventListener('click', () => {
 const DOW = ['日','月','火','水','木','金','土'];
 const MONTHS_SHOW = 6;
 
+function isMobile() { return window.innerWidth <= 768; }
+
 function renderOneMonth(year, month, activeKey) {
   const block = document.createElement('div');
   block.className = 'cal-month-block';
@@ -609,7 +641,8 @@ function renderCalendar() {
   const scroll = document.getElementById('cal-scroll');
   const activeKey = currentIdx>=0 ? dateKeys[currentIdx] : null;
   scroll.innerHTML = '';
-  for (let i=0; i<MONTHS_SHOW; i++) {
+  const monthsToShow = isMobile() ? 1 : MONTHS_SHOW;
+  for (let i=0; i<monthsToShow; i++) {
     let m = calMonth - i;
     let y = calYear;
     while (m < 0) { m += 12; y--; }
@@ -817,6 +850,8 @@ document.addEventListener('drop',e=>{
   fi.files=dt.files; fi.dispatchEvent(new Event('change'));
 });
 map.on('zoomend', resizeDots);
+
+window.addEventListener('resize', () => { renderCalendar(); });
 
 document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowUp') document.getElementById('btn-next').click();
