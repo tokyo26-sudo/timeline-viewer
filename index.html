@@ -116,16 +116,25 @@
     }
     .map-wrap {
       width: 100%;
-      height: 55vw;
-      min-height: 260px;
-      max-height: 60vh;
+      height: calc(100vh - 120px);
+      min-height: 300px;
       order: 1;
       position: relative;
     }
     #map { width: 100%; height: 100%; min-height: unset; }
     .cal-scroll { overflow: visible; max-height: none; }
-    /* スマホではyear-gridをインラインに */
     .year-grid.visible { display: block; }
+    /* スマホ用年月セレクト */
+    .cal-mobile-selects { display: flex; gap: 6px; padding: 6px 12px; }
+    .cal-mobile-selects select {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px;
+      padding: 5px 6px; border-radius: 5px; cursor: pointer;
+    }
+  }
+  /* PCではスマホ用セレクトをかくす */
+  @media (min-width: 769px) {
+    .cal-mobile-selects { display: none; }
   }
 </style>
 </head>
@@ -178,6 +187,15 @@
       <div class="cal-toolbar-title" id="cal-title">—</div>
       <button id="cal-next">▸</button>
     </div>
+    <div class="cal-mobile-selects">
+      <select id="cal-sel-year"></select>
+      <select id="cal-sel-month">
+        <option value="0">1月</option><option value="1">2月</option><option value="2">3月</option>
+        <option value="3">4月</option><option value="4">5月</option><option value="5">6月</option>
+        <option value="6">7月</option><option value="7">8月</option><option value="8">9月</option>
+        <option value="9">10月</option><option value="10">11月</option><option value="11">12月</option>
+      </select>
+    </div>
     <div class="year-grid" id="year-grid"></div>
     <div class="range-bar" id="range-bar">
       <div class="range-info" id="range-info">—</div>
@@ -191,7 +209,7 @@
 
   <div class="map-wrap">
     <div id="map"></div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.5.0</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.5.2</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -649,6 +667,30 @@ function renderCalendar() {
     scroll.appendChild(renderOneMonth(y, m, activeKey));
   }
   document.getElementById('cal-title').textContent = calYear+'年 '+(calMonth+1)+'月';
+  // スマホ用セレクトを更新
+  updateMobileSelects();
+}
+
+function updateMobileSelects() {
+  const selY = document.getElementById('cal-sel-year');
+  const selM = document.getElementById('cal-sel-month');
+  if (!selY || !selM) return;
+  // 年リストをdateKeysからつくる（なければ現在年）
+  const years = dateKeys.length > 0
+    ? [...new Set(dateKeys.map(k=>k.slice(0,4)))].sort().reverse()
+    : [String(calYear)];
+  // 年セレクトをさいびょうが（ないようがかわったときだけ）
+  const curYears = Array.from(selY.options).map(o=>o.value);
+  if (JSON.stringify(curYears) !== JSON.stringify(years)) {
+    selY.innerHTML = '';
+    years.forEach(y => {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y+'年';
+      selY.appendChild(o);
+    });
+  }
+  selY.value = String(calYear);
+  selM.value = String(calMonth);
 }
 
 document.getElementById('cal-prev').addEventListener('click', ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
@@ -852,6 +894,14 @@ document.addEventListener('drop',e=>{
 map.on('zoomend', resizeDots);
 
 window.addEventListener('resize', () => { renderCalendar(); });
+
+// スマホ用年月セレクトのイベント
+document.getElementById('cal-sel-year').addEventListener('change', e => {
+  calYear = parseInt(e.target.value); renderCalendar();
+});
+document.getElementById('cal-sel-month').addEventListener('change', e => {
+  calMonth = parseInt(e.target.value); renderCalendar();
+});
 
 document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowUp') document.getElementById('btn-next').click();
