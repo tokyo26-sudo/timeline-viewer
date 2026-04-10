@@ -100,7 +100,7 @@
 
   /* ===== スマホレイアウト ===== */
   @media (max-width: 768px) {
-    body { overflow: auto; height: auto; min-height: 100vh; }
+    body { overflow: auto; height: auto !important; min-height: 100vh; }
     header { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
     .header-right { width: 100%; flex-wrap: wrap; gap: 6px; }
     .filter-wrap { flex-wrap: wrap; width: 100%; }
@@ -116,13 +116,14 @@
     }
     .map-wrap {
       width: 100%;
-      height: 50vh;
+      height: 320px !important;
       min-height: 280px;
       order: 1;
       position: relative;
       flex-shrink: 0;
+      display: block !important;
     }
-    #map { width: 100%; height: 100% !important; min-height: unset; }
+    #map { width: 100% !important; height: 320px !important; min-height: unset; display: block !important; }
     .cal-scroll { overflow: visible; max-height: none; }
     .year-grid.visible { display: block; }
     .cal-mobile-selects { display: flex; gap: 6px; padding: 6px 12px; }
@@ -219,7 +220,7 @@
   <div class="map-wrap">
     <div id="map"></div>
     <div class="gesture-hint" id="gesture-hint">👆👆 ゆびにほんでちずをうごかす</div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.5.8</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.5.9</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -941,7 +942,15 @@ document.addEventListener('drop',e=>{
 });
 map.on('zoomend', resizeDots);
 
-window.addEventListener('resize', () => { renderCalendar(); });
+window.addEventListener('resize', () => {
+    renderCalendar();
+    setTimeout(() => map.invalidateSize(), 100);
+  });
+
+// ページよみこみかんりょうごにちずサイズをさいけいさん
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => map.invalidateSize(), 200);
+});
 
 document.getElementById('cal-sel-year').addEventListener('change', e => {
   calYear = parseInt(e.target.value); renderCalendar();
