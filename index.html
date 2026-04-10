@@ -116,13 +116,11 @@
     }
     .map-wrap {
       width: 100%;
-      height: 320px !important;
-      min-height: 280px;
-      max-height: 320px;
+      height: 55vh;
+      min-height: 250px;
       order: 1;
       position: relative;
       flex-shrink: 0;
-      align-self: flex-start;
       display: block !important;
     }
     #map { width: 100% !important; height: 100% !important; min-height: unset; display: block !important; }
@@ -222,7 +220,7 @@
   <div class="map-wrap">
     <div id="map"></div>
     <div class="gesture-hint" id="gesture-hint">👆👆 ゆびにほんでちずをうごかす</div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.6.1</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.6.2</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -947,26 +945,9 @@ map.on('zoomend', resizeDots);
 window.addEventListener('resize', () => {
     renderCalendar();
     setTimeout(() => map.invalidateSize(), 100);
-    if (isMobile()) setMobileMapHeight();
   });
 
-// ページよみこみかんりょうごにちずサイズをさいけいさん
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => map.invalidateSize(), 200);
-});
-
-// すまほようちずたかさをどうてきにきめる
-function setMobileMapHeight() {
-  if (!isMobile()) return;
-  const headerH = document.querySelector('header').offsetHeight;
-  const mapH = Math.max(window.innerHeight - headerH - 20, 280);
-  const mapWrap = document.querySelector('.map-wrap');
-  const mapEl = document.getElementById('map');
-  mapWrap.style.height = mapH + 'px';
-  mapWrap.style.maxHeight = mapH + 'px';
-  mapEl.style.height = mapH + 'px';
-  setTimeout(() => map.invalidateSize(), 50);
-}
+setTimeout(() => map.invalidateSize(), 300);
 
 document.getElementById('cal-sel-year').addEventListener('change', e => {
   calYear = parseInt(e.target.value); renderCalendar();
@@ -1032,7 +1013,6 @@ document.getElementById('btn-display').addEventListener('change', e => {
 
 renderCalendar();
 applyLang();
-if (isMobile()) setTimeout(() => setMobileMapHeight(), 100);
 // トグルの初期状態（線モード=checked）
 const btnDisplay = document.getElementById('btn-display');
 btnDisplay.checked = false;
