@@ -184,7 +184,8 @@
         <option value="gsi_std">🗾 標準</option>
         <option value="gsi_pale">🗺️ 淡色</option>
         <option value="gsi_blank">⬜ 白地図</option>
-        <option value="gsi_photo">🛰️ 衛星写真</option>
+        <option value="gsi_photo">🛰️ 衛星写真(日本)</option>
+        <option value="esri_photo">🌍 衛星写真(世界)</option>
       </select>
 
       <button class="nav-btn" id="btn-lang" title="言語切替" style="font-size:11px;letter-spacing:0.05em;">EN</button>
@@ -197,7 +198,7 @@
   <div class="map-wrap">
     <div id="map"></div>
     <div class="gesture-hint" id="gesture-hint">👆👆 ゆびにほんでちずをうごかす</div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.7.0</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.7.1</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -992,7 +993,8 @@ const THEMES = {
   gsi_std:   { url:'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',            filter:'none',                                                             subdomains:'' },
   gsi_pale:  { url:'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',           filter:'none',                                                             subdomains:'' },
   gsi_blank: { url:'https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png',          filter:'none',                                                             subdomains:'' },
-  gsi_photo: { url:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',  filter:'none',                                                             subdomains:'' },
+  gsi_photo:  { url:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',  filter:'none', subdomains:'' },
+  esri_photo: { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', filter:'none', subdomains:'' },
 };
 
 document.getElementById('btn-theme').addEventListener('change', e => {
