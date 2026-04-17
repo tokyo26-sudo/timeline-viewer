@@ -178,7 +178,14 @@
         </span>
         ／
       </label>
-      <button class="nav-btn" id="btn-theme" title="地図テーマ切替">🌙</button>
+      <select id="btn-theme" title="地図テーマ切替" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:4px 6px;border-radius:4px;cursor:pointer;">
+        <option value="dark">🌙 ダーク</option>
+        <option value="gray">☀️ ライト</option>
+        <option value="gsi_std">🗾 標準</option>
+        <option value="gsi_pale">🗺️ 淡色</option>
+        <option value="gsi_blank">⬜ 白地図</option>
+        <option value="gsi_photo">🛰️ 衛星写真</option>
+      </select>
 
       <button class="nav-btn" id="btn-lang" title="言語切替" style="font-size:11px;letter-spacing:0.05em;">EN</button>
       <button class="nav-btn" id="btn-help" title="ヘルプ" style="font-weight:700;">?</button>
@@ -190,7 +197,7 @@
   <div class="map-wrap">
     <div id="map"></div>
     <div class="gesture-hint" id="gesture-hint">👆👆 ゆびにほんでちずをうごかす</div>
-    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.6.4</div>
+    <div style="position:absolute;bottom:8px;left:12px;z-index:800;font-size:10px;font-family:'DM Mono',monospace;color:#6af7c8;background:rgba(10,10,15,0.65);padding:2px 7px;border-radius:4px;pointer-events:none;letter-spacing:0.08em;">v1.7.0</div>
     <div class="empty-state" id="empty-state">
       <div class="empty-icon">🗺</div>
       <div class="empty-title">データを読み込んでネ</div>
@@ -980,18 +987,20 @@ document.getElementById('help-modal').addEventListener('click', e => {
 
 // テーマきりかえ
 const THEMES = {
-  dark:  { url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',   filter:'brightness(0.88) saturate(0.9) hue-rotate(185deg) contrast(1.1)', icon:'🌙', next:'gray' },
-  gray:  { url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',  filter:'brightness(0.95) saturate(0.9) contrast(1.0)',                      icon:'☀️', next:'dark' },
+  dark:      { url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',          filter:'brightness(0.88) saturate(0.9) hue-rotate(185deg) contrast(1.1)', subdomains:'abcd' },
+  gray:      { url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',         filter:'brightness(0.95) saturate(0.9) contrast(1.0)',                     subdomains:'abcd' },
+  gsi_std:   { url:'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',            filter:'none',                                                             subdomains:'' },
+  gsi_pale:  { url:'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',           filter:'none',                                                             subdomains:'' },
+  gsi_blank: { url:'https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png',          filter:'none',                                                             subdomains:'' },
+  gsi_photo: { url:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',  filter:'none',                                                             subdomains:'' },
 };
 
-document.getElementById('btn-theme').addEventListener('click', () => {
-  const t = THEMES[mapTheme];
-  mapTheme = t.next;
+document.getElementById('btn-theme').addEventListener('change', e => {
+  mapTheme = e.target.value;
   const nt = THEMES[mapTheme];
   currentTile.remove();
-  currentTile = L.tileLayer(nt.url, {maxZoom:19, subdomains:'abcd'}).addTo(map);
+  currentTile = L.tileLayer(nt.url, { maxZoom:18, subdomains: nt.subdomains }).addTo(map);
   document.querySelector('.leaflet-tile-pane').style.filter = nt.filter;
-  document.getElementById('btn-theme').textContent = nt.icon;
 });
 
 // ひょうじモードきりかえ（トグル）
